@@ -1,0 +1,71 @@
+-
+  name: Deploy a web application
+  hosts: localhost
+  tasks:
+    - name: "Install dependencies"
+      yum:
+        enablerepo: "epel"
+        name: "{{ item }}"
+        state: "present"
+      with_items:
+       - python
+       - python-pip
+    - name: "Install python dependencies"
+      pip:
+       name: "{{ item }}"
+       state: "present"
+      with_items:
+       - flask
+       - flask-mysql
+    - name:   "Download mysql file"
+      get_url:
+       url: http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
+       state: "present"
+       dest: "/home/riyaz/myansible/mysql-community-release-el7-5.noarch.rpm"
+    - name: Import MySQL GPG Key
+      shell: rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql
+    - name: "install mysql-rpm"
+      yum:
+       name: mysql-community-release-el7-5.noarch.rpm
+       state: present
+    - name: "Update repositories"
+      yum:
+       name: "*"
+       state: latest
+    - name: "install mysql"
+      yum:
+       name: mysql-server
+       state: present
+       update_cache: true   
+    - name: Make sure a service is running
+      systemd:
+        state: started
+        name: mysqld
+    - name: "configuring mysql"
+      command: "mysql -u root"
+    - name: Create a new database with name 'employee_db'
+      mysql_db:
+        name: employee_db
+        state: present
+    - name: Create database user with name 'db_user' and password 'Passw0rd' with all database privileges
+      mysql_user:
+        name: db_user
+        password: "Passw0rd"
+        priv: '*.*:ALL'
+        state: present
+    - name: Creating Table and data
+      community.mysql.mysql_query:
+        login_db: employee_db
+        query:
+          - DROP TABLE IF EXISTS employees;
+          - CREATE TABLE employees (name VARCHAR(20));
+          - INSERT INTO employees VALUES ('JOHN');
+    - name: "run python app"
+      command: "flask run --host=0.0.0.0"
+      environment:
+        FLASK_APP: /home/riyaz/myansible/app.py
+    
+    
+    
+
+
